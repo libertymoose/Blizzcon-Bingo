@@ -301,6 +301,8 @@
     word-break: break-word;
     outline: none;
     font-size: 20px;
+    position: relative;
+    z-index: 2;
   }
 
   .grid.watch .cell { cursor: pointer; }
@@ -310,6 +312,17 @@
     border-color: var(--teal);
     background: var(--marked-bg);
     box-shadow: 0 0 0 1px var(--teal) inset;
+  }
+
+  .cell.marked:not(.free)::before {
+    content: '';
+    position: absolute;
+    inset: 13%;
+    background:
+      linear-gradient(45deg, transparent 44%, var(--teal) 44%, var(--teal) 56%, transparent 56%),
+      linear-gradient(-45deg, transparent 44%, var(--teal) 44%, var(--teal) 56%, transparent 56%);
+    opacity: 0.32;
+    pointer-events: none;
   }
 
   .cell.marked:not(.free)::after {

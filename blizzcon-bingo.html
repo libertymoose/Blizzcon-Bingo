@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlizzCon Bingo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0a0a12;
+    --panel: #14141f;
+    --panel-2: #1b1b2c;
+    --line: #30304a;
+    --ink: #f1efe6;
+    --ink-dim: #82829c;
+    --yellow: #f2e14d;
+    --teal: #35d6c4;
+    --pink: #ff5da8;
+    --violet: #8f7cff;
+    --green: #4be08a;
+    --free-a: #201c36;
+    --free-b: #262041;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    padding: 28px 16px 48px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 540px;
+    position: relative;
+  }
+
+  /* ---- Pixel chip decorations ---- */
+  .chip {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+  }
+  .chip.c1 { background: var(--pink); top: -6px; left: 18px; }
+  .chip.c2 { width: 6px; height: 6px; background: var(--teal); top: 2px; left: 30px; }
+  .chip.c3 { background: var(--violet); top: -4px; right: 40px; }
+  .chip.c4 { width: 6px; height: 6px; background: var(--yellow); top: 8px; right: 24px; }
+  .chip.c5 { width: 5px; height: 5px; background: var(--pink); bottom: -4px; right: 8px; }
+
+  /* ---- Header: pixel title bar ---- */
+  .slate {
+    position: relative;
+    margin-bottom: 18px;
+    padding: 6px 0;
+  }
+
+  .title-bar {
+    background: var(--yellow);
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .title-bar .bracket {
+    font-family: 'Silkscreen', monospace;
+    color: #1a1706;
+    font-size: 0.9rem;
+    opacity: 0.55;
+  }
+
+  .title-bar h1 {
+    font-family: 'Silkscreen', monospace;
+    font-weight: 700;
+    font-size: clamp(1.05rem, 5vw, 1.5rem);
+    margin: 0;
+    color: #1a1706;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+
+  /* ---- Meta row ---- */
+  .meta-row {
+    margin: 16px 0 18px;
+    padding: 10px 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+
+  .meta-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .meta-field label {
+    font-size: 0.66rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .meta-field input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--line);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 3px 0 5px;
+    outline: none;
+    width: 100%;
+  }
+
+  .meta-field input:focus { border-bottom-color: var(--teal); }
+
+  /* ---- Toolbar ---- */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .toolbar button {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 9px 14px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .toolbar button:hover { border-color: var(--teal); }
+
+  .toolbar button.primary {
+    background: var(--teal);
+    color: #062825;
+    border-color: var(--teal);
+  }
+
+  .toolbar button.primary.active {
+    background: var(--violet);
+    border-color: var(--violet);
+    color: #16123d;
+  }
+
+  .toolbar button.export {
+    margin-left: auto;
+    background: var(--pink);
+    border-color: var(--pink);
+    color: #33051a;
+  }
+
+  .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ---- Bingo banner ---- */
+  .banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: var(--green);
+    color: #082614;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-family: 'Silkscreen', monospace;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-size: 1.15rem;
+    text-align: center;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    animation: slidein 0.3s ease;
+  }
+
+  .banner.show { display: flex; }
+
+  @keyframes slidein {
+    from { transform: translateY(-6px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* ---- Grid ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .cell {
+    position: relative;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    overflow: hidden;
+    transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  }
+
+  .cell .txt {
+    width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    text-align: center;
+    color: var(--ink);
+    line-height: 1.15;
+    font-weight: 700;
+    word-break: break-word;
+    outline: none;
+    font-size: 20px;
+  }
+
+  .grid.watch .cell { cursor: pointer; }
+  .grid.watch .cell.free { cursor: default; }
+
+  .cell.marked {
+    border-color: var(--teal);
+    background: #16342f;
+    box-shadow: 0 0 0 1px var(--teal) inset;
+  }
+
+  .cell.marked:not(.free)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: 0 0 14px rgba(53, 214, 196, 0.35);
+    pointer-events: none;
+  }
+
+  .cell.marked:not(.free) .txt { color: #cdfaf1; }
+
+  .cell.just-marked { animation: pop 0.32s ease; }
+
+  @keyframes pop {
+    0% { transform: scale(1); }
+    45% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+  }
+
+  .cell.free {
+    background: repeating-linear-gradient(135deg, var(--free-a), var(--free-a) 6px, var(--free-b) 6px, var(--free-b) 12px);
+    border: 1px dashed var(--violet);
+    box-shadow: 0 0 10px rgba(143, 124, 255, 0.2) inset;
+  }
+
+  .cell.free .txt {
+    color: var(--violet);
+    font-family: 'Silkscreen', monospace;
+    font-weight: 700;
+  }
+
+  .cell.win {
+    border-color: var(--green);
+    box-shadow: 0 0 0 1px var(--green) inset, 0 0 16px rgba(75, 224, 138, 0.55);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cell, .banner, .cell.just-marked { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="cardRoot">
+
+  <div class="slate">
+    <span class="chip c1"></span>
+    <span class="chip c2"></span>
+    <span class="chip c3"></span>
+    <span class="chip c4"></span>
+    <span class="chip c5"></span>
+    <div class="title-bar">
+      <span class="bracket">&laquo;</span>
+      <h1>BLIZZCON BINGO</h1>
+      <span class="bracket">&raquo;</span>
+    </div>
+  </div>
+
+  <div class="meta-row">
+    <div class="meta-field">
+      <label for="watcher">This card belongs to</label>
+      <input id="watcher" type="text" placeholder="Your name">
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button id="shuffleBtn">Shuffle</button>
+    <button id="lockBtn" class="primary">Lock card</button>
+    <button id="clearMarksBtn" disabled>Clear marks</button>
+    <button id="exportBtn" class="export">Export</button>
+  </div>
+
+  <div id="banner" class="banner">
+    <span id="bannerText">Bingo!</span>
+  </div>
+
+  <div id="grid" class="grid"></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+(function () {
+  const SIZE = 5;
+  const STORAGE_KEY = 'blizzcon-bingo-card-v1';
+  let cells = [];
+  let locked = false;
+
+  const grid = document.getElementById('grid');
+  const banner = document.getElementById('banner');
+  const bannerText = document.getElementById('bannerText');
+  const lockBtn = document.getElementById('lockBtn');
+  const clearMarksBtn = document.getElementById('clearMarksBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const cardRoot = document.getElementById('cardRoot');
+  const ownerInput = document.getElementById('watcher');
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        cells: cells,
+        locked: locked,
+        owner: ownerInput.value
+      }));
+    } catch (e) { /* storage unavailable, card just won't persist */ }
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!data.cells || data.cells.length !== SIZE * SIZE) return false;
+      cells = data.cells;
+      locked = !!data.locked;
+      ownerInput.value = data.owner || '';
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function makeCells() {
+    const total = SIZE * SIZE;
+    const freeIndex = Math.floor(total / 2);
+    const arr = [];
+    for (let i = 0; i < total; i++) {
+      if (i === freeIndex) {
+        arr.push({ text: 'FREE', marked: true, free: true });
+      } else {
+        arr.push({ text: '', marked: false, free: false });
+      }
+    }
+    return arr;
+  }
+
+  function fitText(el) {
+    let fontSize = 20;
+    el.style.fontSize = fontSize + 'px';
+    while (fontSize > 8 && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth)) {
+      fontSize -= 1;
+      el.style.fontSize = fontSize + 'px';
+    }
+  }
+
+  function render() {
+    grid.classList.toggle('watch', locked);
+    grid.innerHTML = '';
+
+    cells.forEach((cell, i) => {
+      const el = document.createElement('div');
+      el.className = 'cell';
+      if (cell.free) el.classList.add('free');
+      if (cell.marked) el.classList.add('marked');
+
+      const txt = document.createElement('div');
+      txt.className = 'txt';
+      txt.textContent = cell.text;
+
+      if (!locked) {
+        txt.contentEditable = 'true';
+        txt.spellcheck = false;
+        txt.addEventListener('input', () => {
+          cells[i].text = txt.textContent;
+          fitText(txt);
+          saveState();
+        });
+      }
+
+      el.appendChild(txt);
+
+      if (locked && !cell.free) {
+        el.addEventListener('click', () => toggleMark(i, el));
+      }
+
+      grid.appendChild(el);
+      fitText(txt);
+    });
+
+    updateBingoState();
+  }
+
+  function toggleMark(i, el) {
+    cells[i].marked = !cells[i].marked;
+    el.classList.toggle('marked', cells[i].marked);
+    if (cells[i].marked) {
+      el.classList.add('just-marked');
+      setTimeout(() => el.classList.remove('just-marked'), 320);
+    }
+    updateBingoState();
+    saveState();
+  }
+
+  function winningLines() {
+    const n = SIZE;
+    const lines = [];
+    for (let r = 0; r < n; r++) lines.push(Array.from({ length: n }, (_, c) => r * n + c));
+    for (let c = 0; c < n; c++) lines.push(Array.from({ length: n }, (_, r) => r * n + c));
+    lines.push(Array.from({ length: n }, (_, k) => k * n + k));
+    lines.push(Array.from({ length: n }, (_, k) => k * n + (n - 1 - k)));
+    return lines;
+  }
+
+  function updateBingoState() {
+    const lines = winningLines();
+    const completed = lines.filter((line) => line.every((idx) => cells[idx].marked));
+    const winIndices = new Set();
+    completed.forEach((line) => line.forEach((idx) => winIndices.add(idx)));
+
+    Array.from(grid.children).forEach((el, i) => {
+      el.classList.toggle('win', winIndices.has(i));
+    });
+
+    if (completed.length === 0) {
+      banner.classList.remove('show');
+    } else {
+      bannerText.textContent = completed.length === 1 ? 'Bingo!' : 'Bingo x' + completed.length;
+      banner.classList.add('show');
+    }
+  }
+
+  shuffleBtn.addEventListener('click', () => {
+    const texts = cells.filter((c) => !c.free).map((c) => c.text);
+    for (let i = texts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [texts[i], texts[j]] = [texts[j], texts[i]];
+    }
+    let t = 0;
+    cells = cells.map((c) => (c.free ? c : { ...c, text: texts[t++] }));
+    render();
+    saveState();
+  });
+
+  lockBtn.addEventListener('click', () => {
+    locked = !locked;
+    lockBtn.textContent = locked ? 'Unlock card' : 'Lock card';
+    lockBtn.classList.toggle('active', locked);
+    shuffleBtn.disabled = locked;
+    clearMarksBtn.disabled = !locked;
+    render();
+    saveState();
+  });
+
+  clearMarksBtn.addEventListener('click', () => {
+    cells = cells.map((c) => (c.free ? c : { ...c, marked: false }));
+    render();
+    saveState();
+  });
+
+  ownerInput.addEventListener('input', saveState);
+
+  exportBtn.addEventListener('click', () => {
+    if (typeof html2canvas === 'undefined') return;
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Exporting…';
+    html2canvas(cardRoot, {
+      backgroundColor: '#0a0a12',
+      scale: 2
+    }).then((canvas) => {
+      const link = document.createElement('a');
+      const owner = document.getElementById('watcher').value.trim();
+      link.download = (owner ? owner.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-' : '') + 'blizzcon-bingo.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      exportBtn.disabled = false;
+      exportBtn.textContent = 'Export';
+    }).catch(() => {
+      exportBtn.disabled = false;
+      exportBtn.textContent = 'Export';
+    });
+  });
+
+  if (!loadState()) {
+    cells = makeCells();
+  }
+  lockBtn.textContent = locked ? 'Unlock card' : 'Lock card';
+  lockBtn.classList.toggle('active', locked);
+  shuffleBtn.disabled = locked;
+  clearMarksBtn.disabled = !locked;
+  render();
+})();
+</script>
+
+</body>
+</html>

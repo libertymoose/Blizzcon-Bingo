@@ -298,7 +298,9 @@
     color: var(--ink);
     line-height: 1.15;
     font-weight: 700;
-    word-break: break-word;
+    word-break: normal;
+    overflow-wrap: normal;
+    white-space: pre-line;
     outline: none;
     font-size: 20px;
     position: relative;
@@ -498,12 +500,25 @@
   }
 
   function fitText(el) {
+    const parent = el.parentElement;
+    // Measure against the cell's actual available space rather than
+    // the text box's own size — percentage-based height doesn't
+    // always resolve reliably across nested grid/flex layouts, which
+    // could stop the shrink early or let a word split mid-letter.
+    const pad = 10; // 5px cell padding on each side
+    const maxW = parent.clientWidth - pad;
+    const maxH = parent.clientHeight - pad;
+
     let fontSize = 20;
     el.style.fontSize = fontSize + 'px';
-    while (fontSize > 8 && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth)) {
+    while (fontSize > 10 && (el.scrollHeight > maxH || el.scrollWidth > maxW)) {
       fontSize -= 1;
       el.style.fontSize = fontSize + 'px';
     }
+  }
+
+  function refitAllText() {
+    grid.querySelectorAll('.txt').forEach(fitText);
   }
 
   function render() {
@@ -527,6 +542,39 @@
           cells[i].text = txt.textContent;
           fitText(txt);
           saveState();
+        });
+        // Enter inserts a plain newline character (rendered via
+        // white-space: pre-line) rather than letting the browser
+        // insert a <div>/<br> wrapper — that's what previously left
+        // stray structure behind and confused the auto-fit sizing.
+        txt.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            document.execCommand('insertText', false, '\n');
+            cells[i].text = txt.textContent;
+            fitText(txt);
+            saveState();
+          }
+        });
+        // Paste comes in as plain text too, newlines included, so a
+        // multi-line paste doesn't carry over hidden formatting.
+        txt.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const plain = (e.clipboardData || window.clipboardData).getData('text/plain');
+          document.execCommand('insertText', false, plain);
+          cells[i].text = txt.textContent;
+          fitText(txt);
+          saveState();
+        });
+        // Safety net: on blur, flatten the box back down to plain
+        // text so nothing stray survives between edits.
+        txt.addEventListener('blur', () => {
+          const plain = txt.textContent;
+          if (txt.childElementCount > 0) {
+            txt.textContent = plain;
+          }
+          cells[i].text = plain;
+          fitText(txt);
         });
       }
 
@@ -656,6 +704,17 @@
   shuffleBtn.disabled = locked;
   clearMarksBtn.disabled = !locked;
   render();
+
+  // Cell text can be measured before the pixel/body webfonts finish
+  // downloading, which sizes it against fallback-font metrics and
+  // leaves it looking too small once the real font swaps in. Re-fit
+  // everything the moment the fonts actually report as ready.
+  if (window.document && document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(refitAllText);
+  } else {
+    setTimeout(refitAllText, 400);
+  }
+  window.addEventListener('resize', refitAllText);
 })();
 </script>
 

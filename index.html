@@ -21,6 +21,27 @@
     --green: #4be08a;
     --free-a: #201c36;
     --free-b: #262041;
+    --marked-bg: #16342f;
+    --marked-ink: #cdfaf1;
+    --scanline: rgba(255,255,255,0.02);
+  }
+
+  :root[data-theme="light"] {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --panel-2: #eef0f3;
+    --line: #d7dade;
+    --ink: #17181c;
+    --ink-dim: #6b6e76;
+    --teal: #0fa997;
+    --pink: #e2408c;
+    --violet: #7660ea;
+    --green: #1f9c5e;
+    --free-a: #eeeafd;
+    --free-b: #e4defb;
+    --marked-bg: #dcf5ee;
+    --marked-ink: #0a3d33;
+    --scanline: rgba(0,0,0,0.035);
   }
 
   * { box-sizing: border-box; }
@@ -29,11 +50,12 @@
     margin: 0;
     background: var(--bg);
     background-image:
-      repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px),
-      repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px);
+      repeating-linear-gradient(0deg, var(--scanline) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, var(--scanline) 0 1px, transparent 1px 3px);
     color: var(--ink);
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition: background 0.2s ease, color 0.2s ease;
   }
 
   body {
@@ -48,6 +70,33 @@
     position: relative;
   }
 
+  .export-frame {
+    padding: 0;
+  }
+
+  /* ---- Theme toggle ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 30;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    line-height: 1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    cursor: pointer;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    transition: border-color 0.15s ease, background 0.2s ease;
+  }
+
+  .theme-toggle:hover { border-color: var(--teal); }
+
   /* ---- Pixel chip decorations ---- */
   .chip {
     position: absolute;
@@ -59,6 +108,16 @@
   .chip.c3 { background: var(--violet); top: -4px; right: 40px; }
   .chip.c4 { width: 6px; height: 6px; background: var(--yellow); top: 8px; right: 24px; }
   .chip.c5 { width: 5px; height: 5px; background: var(--pink); bottom: -4px; right: 8px; }
+
+  .toolbar { position: relative; }
+  .chip.t1 { top: -5px; right: -4px; background: var(--teal); }
+
+  .grid-wrap { position: relative; }
+  .chip.g1 { width: 6px; height: 6px; top: -5px; right: -4px; background: var(--pink); }
+  .chip.g2 { bottom: -5px; left: -4px; background: var(--yellow); }
+
+  .meta-row { position: relative; }
+  .chip.m1 { width: 6px; height: 6px; top: -5px; right: 26px; background: var(--violet); }
 
   /* ---- Header: pixel title bar ---- */
   .slate {
@@ -239,7 +298,7 @@
 
   .cell.marked {
     border-color: var(--teal);
-    background: #16342f;
+    background: var(--marked-bg);
     box-shadow: 0 0 0 1px var(--teal) inset;
   }
 
@@ -251,7 +310,7 @@
     pointer-events: none;
   }
 
-  .cell.marked:not(.free) .txt { color: #cdfaf1; }
+  .cell.marked:not(.free) .txt { color: var(--marked-ink); }
 
   .cell.just-marked { animation: pop 0.32s ease; }
 
@@ -285,6 +344,9 @@
 </head>
 <body>
 
+<button id="themeToggle" class="theme-toggle" aria-label="Toggle light and dark mode">🌙</button>
+
+<div class="export-frame" id="exportFrame">
 <div class="card" id="cardRoot">
 
   <div class="slate">
@@ -301,6 +363,7 @@
   </div>
 
   <div class="meta-row">
+    <span class="chip m1"></span>
     <div class="meta-field">
       <label for="watcher">This card belongs to</label>
       <input id="watcher" type="text" placeholder="Your name">
@@ -308,6 +371,7 @@
   </div>
 
   <div class="toolbar">
+    <span class="chip t1"></span>
     <button id="shuffleBtn">Shuffle</button>
     <button id="lockBtn" class="primary">Lock card</button>
     <button id="clearMarksBtn" disabled>Clear marks</button>
@@ -318,8 +382,13 @@
     <span id="bannerText">Bingo!</span>
   </div>
 
-  <div id="grid" class="grid"></div>
+  <div class="grid-wrap">
+    <span class="chip g1"></span>
+    <span class="chip g2"></span>
+    <div id="grid" class="grid"></div>
+  </div>
 
+</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -327,6 +396,7 @@
 (function () {
   const SIZE = 5;
   const STORAGE_KEY = 'blizzcon-bingo-card-v1';
+  const THEME_KEY = 'blizzcon-bingo-theme';
   let cells = [];
   let locked = false;
 
@@ -337,8 +407,27 @@
   const clearMarksBtn = document.getElementById('clearMarksBtn');
   const shuffleBtn = document.getElementById('shuffleBtn');
   const exportBtn = document.getElementById('exportBtn');
-  const cardRoot = document.getElementById('cardRoot');
+  const exportFrame = document.getElementById('exportFrame');
   const ownerInput = document.getElementById('watcher');
+  const themeToggle = document.getElementById('themeToggle');
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+    themeToggle.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* storage unavailable */ }
+  }
+
+  function initTheme() {
+    let theme = 'dark';
+    try { theme = localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { /* storage unavailable */ }
+    applyTheme(theme);
+  }
+
+  themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(current === 'light' ? 'dark' : 'light');
+  });
 
   function saveState() {
     try {
@@ -496,10 +585,19 @@
     if (typeof html2canvas === 'undefined') return;
     exportBtn.disabled = true;
     exportBtn.textContent = 'Exporting…';
-    html2canvas(cardRoot, {
-      backgroundColor: '#0a0a12',
+    const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#0a0a12';
+
+    // Temporarily add breathing room around the card so the pixel
+    // accents that sit slightly outside its edges aren't clipped.
+    exportFrame.style.padding = '32px';
+    exportFrame.style.background = bgColor;
+
+    html2canvas(exportFrame, {
+      backgroundColor: bgColor,
       scale: 2
     }).then((canvas) => {
+      exportFrame.style.padding = '';
+      exportFrame.style.background = '';
       const link = document.createElement('a');
       const owner = document.getElementById('watcher').value.trim();
       link.download = (owner ? owner.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-' : '') + 'blizzcon-bingo.png';
@@ -508,6 +606,8 @@
       exportBtn.disabled = false;
       exportBtn.textContent = 'Export';
     }).catch(() => {
+      exportFrame.style.padding = '';
+      exportFrame.style.background = '';
       exportBtn.disabled = false;
       exportBtn.textContent = 'Export';
     });
@@ -516,6 +616,7 @@
   if (!loadState()) {
     cells = makeCells();
   }
+  initTheme();
   lockBtn.textContent = locked ? 'Unlock card' : 'Lock card';
   lockBtn.classList.toggle('active', locked);
   shuffleBtn.disabled = locked;
